@@ -1,0 +1,6 @@
+{
+  "name": "Pisen Product Hub",
+  "description": "Aplikasi informasi katalog produk, scanner barcode visual, dan kalkulator perbandingan harga Pisen Indonesia.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
