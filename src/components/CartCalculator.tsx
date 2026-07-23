@@ -121,7 +121,7 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
             <button
               key={b.id}
               onClick={() => setSelectedBranch(b.id)}
-              className={`rounded-lg py-1.5 px-2 text-3xs font-extrabold tracking-tight transition-all border text-center cursor-pointer ${
+              className={`rounded-lg py-2 px-1.5 transition-all border text-center cursor-pointer flex flex-col justify-between h-full min-h-[50px] ${
                 selectedBranch === b.id
                   ? b.company === 'Planet Gadget'
                     ? 'bg-teal-50 border-teal-200 text-teal-850 shadow-2xs'
@@ -129,8 +129,8 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
                   : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100'
               }`}
             >
-              <span className="block truncate">{b.short}</span>
-              <span className="block text-[8px] opacity-70 font-normal">
+              <span className="block break-words whitespace-normal leading-tight font-extrabold text-[8px] xs:text-[9px] sm:text-[10px] tracking-tight">{b.short}</span>
+              <span className="block text-[8px] opacity-70 font-normal mt-0.5">
                 {b.company === 'Planet Gadget' ? 'PG' : 'CW'}
               </span>
             </button>

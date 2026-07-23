@@ -327,9 +327,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                                 { label: 'PG Denpasar 2 (PG2)', val: product.stockPG2 ?? 0 },
                                 { label: 'PG Denpasar 3 (PG3)', val: product.stockPG3 ?? 0 },
                               ].map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-500 font-medium">{item.label}</span>
-                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${getStockBadgeStyle(item.val)}`}>
+                                <div key={idx} className="flex items-center justify-between text-xs gap-3">
+                                  <span className="text-slate-500 font-medium whitespace-nowrap">{item.label}</span>
+                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${getStockBadgeStyle(item.val)} shrink-0`}>
                                     {item.val} pcs
                                   </span>
                                 </div>
@@ -346,9 +346,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                                 { label: 'CW Infinity Gatsu', val: product.stockCWInfinity ?? 0 },
                                 { label: 'CW Canggu', val: product.stockCWCanggu ?? 0 },
                               ].map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-500 font-medium">{item.label}</span>
-                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${getStockBadgeStyle(item.val)}`}>
+                                <div key={idx} className="flex items-center justify-between text-xs gap-3">
+                                  <span className="text-slate-500 font-medium whitespace-nowrap">{item.label}</span>
+                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${getStockBadgeStyle(item.val)} shrink-0`}>
                                     {item.val} pcs
                                   </span>
                                 </div>
@@ -578,10 +578,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                             {entry.changes.map((change, cIdx) => (
                               <div 
                                 key={cIdx} 
-                                className="flex items-center justify-between text-xs py-1.5 last:border-0 border-b border-slate-50/80"
+                                className="flex items-center justify-between text-xs py-1.5 last:border-0 border-b border-slate-50/80 gap-3"
                               >
-                                <span className="text-slate-500 font-semibold">{change.label}</span>
-                                <div className="flex items-center gap-1.5 font-mono">
+                                <span className="text-slate-500 font-semibold whitespace-nowrap">{change.label}</span>
+                                <div className="flex items-center gap-1.5 font-mono shrink-0">
                                   <span className="text-slate-400 line-through bg-slate-50 px-1.5 py-0.5 rounded text-[10px]">
                                     {change.oldValue}
                                   </span>
