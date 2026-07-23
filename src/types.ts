@@ -33,3 +33,17 @@ export interface LocalStorageData {
   editedPrices: Record<string, { planetGadget: string; cellularWorld: string }>;
   favorites: string[]; // barcodes
 }
+
+export interface StockHistoryEntry {
+  id: string;
+  barcode: string;
+  productName: string;
+  timestamp: string; // ISO string
+  changes: {
+    field: string;
+    label: string;
+    oldValue: string | number;
+    newValue: string | number;
+  }[];
+}
+

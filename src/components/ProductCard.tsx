@@ -361,10 +361,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               onAddToCart();
             }}
             className="flex h-8 w-full items-center justify-center gap-1 rounded-xl bg-slate-900 text-white font-black text-xs shadow-xs transition-all hover:bg-amber-500 hover:text-slate-950 active:scale-95 cursor-pointer"
-            title="Tambah ke Kalkulator Belanja"
+            title="Catat barang keluar untuk dicocokkan dengan stok"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" />
-            <span>Tambah Kalkulator</span>
+            <span>Catat Keluar</span>
           </button>
         </div>
       </div>

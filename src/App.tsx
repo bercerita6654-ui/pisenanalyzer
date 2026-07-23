@@ -11,13 +11,14 @@ import {
   getStableMockStocks,
   CSV_URL 
 } from './utils/csv';
-import { Product, CategoryFilter, CartItem } from './types';
+import { Product, CategoryFilter, CartItem, StockHistoryEntry } from './types';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartCalculator } from './components/CartCalculator';
 import { ComparisonView } from './components/ComparisonView';
 import { BarcodeFinder } from './components/BarcodeFinder';
 import { AddProductModal } from './components/AddProductModal';
+import { StockOpnameModal } from './components/StockOpnameModal';
 import { 
   Search, 
   Grid, 
@@ -33,7 +34,9 @@ import {
   BookOpen,
   LayoutGrid,
   List,
-  ShoppingBag
+  ShoppingBag,
+  ClipboardList,
+  Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -84,12 +87,19 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Local Stock & Price change history logs
+  const [stockHistory, setStockHistory] = useState<StockHistoryEntry[]>(() => {
+    const saved = localStorage.getItem('pisen_stock_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Comparisons deck
   const [compareBarcodes, setCompareBarcodes] = useState<string[]>([]);
 
   // Modal displays
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isSOModalOpen, setIsSOModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'catalog' | 'scanner'>('catalog');
 
   // Trigger sound feedback when products are loaded or updated
@@ -128,6 +138,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('pisen_cart', JSON.stringify(cartItems));
   }, [cartItems]);
+
+  useEffect(() => {
+    localStorage.setItem('pisen_stock_history', JSON.stringify(stockHistory));
+  }, [stockHistory]);
 
   // Fetch initial product list from published Google Sheets
   const handleLoadProducts = async (isManualRefresh = false) => {
@@ -350,6 +364,95 @@ export default function App() {
       cwCanggu: number;
     }
   ) => {
+    // Audit previous product data to log changes in local history
+    const currentProduct = products.find((p) => p.barcode === barcode);
+    if (currentProduct) {
+      const changes: StockHistoryEntry['changes'] = [];
+
+      if (stocks) {
+        if ((currentProduct.stockPG1 ?? 0) !== stocks.pg1) {
+          changes.push({
+            field: 'stockPG1',
+            label: 'PG Teuku Umar (PG1)',
+            oldValue: currentProduct.stockPG1 ?? 0,
+            newValue: stocks.pg1
+          });
+        }
+        if ((currentProduct.stockPG2 ?? 0) !== stocks.pg2) {
+          changes.push({
+            field: 'stockPG2',
+            label: 'PG Gatot Subroto (PG2)',
+            oldValue: currentProduct.stockPG2 ?? 0,
+            newValue: stocks.pg2
+          });
+        }
+        if ((currentProduct.stockPG3 ?? 0) !== stocks.pg3) {
+          changes.push({
+            field: 'stockPG3',
+            label: 'PG Sunset Road (PG3)',
+            oldValue: currentProduct.stockPG3 ?? 0,
+            newValue: stocks.pg3
+          });
+        }
+        if ((currentProduct.stockCWTU ?? 0) !== stocks.cwTu) {
+          changes.push({
+            field: 'stockCWTU',
+            label: 'CW Teuku Umar',
+            oldValue: currentProduct.stockCWTU ?? 0,
+            newValue: stocks.cwTu
+          });
+        }
+        if ((currentProduct.stockCWInfinity ?? 0) !== stocks.cwInfinity) {
+          changes.push({
+            field: 'stockCWInfinity',
+            label: 'CW Infinity Gatsu',
+            oldValue: currentProduct.stockCWInfinity ?? 0,
+            newValue: stocks.cwInfinity
+          });
+        }
+        if ((currentProduct.stockCWCanggu ?? 0) !== stocks.cwCanggu) {
+          changes.push({
+            field: 'stockCWCanggu',
+            label: 'CW Canggu',
+            oldValue: currentProduct.stockCWCanggu ?? 0,
+            newValue: stocks.cwCanggu
+          });
+        }
+      }
+
+      // Check price changes
+      const oldPgPrice = currentProduct.originalPricePlanetGadget || '';
+      if (oldPgPrice !== planetGadget) {
+        changes.push({
+          field: 'pricePlanetGadget',
+          label: 'Harga Planet Gadget',
+          oldValue: oldPgPrice || 'Kosong/Hubungi Toko',
+          newValue: planetGadget || 'Kosong/Hubungi Toko'
+        });
+      }
+
+      const oldCwPrice = currentProduct.originalPriceCellularWorld || '';
+      if (oldCwPrice !== cellularWorld) {
+        changes.push({
+          field: 'priceCellularWorld',
+          label: 'Harga Cellular World',
+          oldValue: oldCwPrice || 'Kosong/Tidak Tersedia',
+          newValue: cellularWorld || 'Kosong/Tidak Tersedia'
+        });
+      }
+
+      if (changes.length > 0) {
+        const newEntry: StockHistoryEntry = {
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          barcode,
+          productName: currentProduct.name,
+          timestamp: new Date().toISOString(),
+          changes
+        };
+        setStockHistory((prev) => [newEntry, ...prev]);
+      }
+    }
+
     setEditedPrices((prev) => ({
       ...prev,
       [barcode]: { pg: planetGadget, cw: cellularWorld },
@@ -457,11 +560,11 @@ export default function App() {
                 PISEN
               </span>
               <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white">
-                Product Hub <span className="text-amber-400">&</span> Price Analyzer
+                Stock Control <span className="text-amber-400">&</span> Reconciliation
               </h1>
             </div>
             <p className="text-xs text-slate-300 mt-1.5 max-w-xl">
-              Sistem informasi produk, katalog interaktif, perbandingan harga toko kasir, serta pencarian barcode deterministik untuk produk Pisen Indonesia.
+              Sistem pendataan barang keluar, pencocokan stok fisik dengan sistem balance secara real-time, evaluasi ketersediaan, serta pencatatan stok cabang Planet Gadget & Cellular World.
             </p>
           </div>
 
@@ -576,6 +679,17 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {/* Print Stock Opname (SO) Form */}
+                        <button
+                          id="open-so-modal"
+                          onClick={() => setIsSOModalOpen(true)}
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs px-4 py-2.5 shadow-2xs transition-all active:scale-98 cursor-pointer w-full sm:w-auto"
+                          title="Cetak Formulir SO (Stock Opname) Bulanan"
+                        >
+                          <Printer className="h-4 w-4 text-slate-500" />
+                          <span>Cetak Formulir SO</span>
+                        </button>
+
                         {/* Add product locally */}
                         <button
                           id="open-add-product-modal"
@@ -835,6 +949,7 @@ export default function App() {
           onToggleFavorite={() => handleToggleFavorite(selectedProduct.barcode)}
           onAddToCart={() => handleAddToCart(selectedProduct)}
           onUpdateProduct={handleLocalUpdateProduct}
+          history={stockHistory.filter((entry) => entry.barcode === selectedProduct.barcode)}
         />
       )}
 
@@ -843,6 +958,12 @@ export default function App() {
         onClose={() => setIsAddModalOpen(false)}
         onAddProduct={handleAddNewCustomProduct}
         existingBarcodes={products.map((p) => p.barcode.toUpperCase())}
+      />
+
+      <StockOpnameModal
+        isOpen={isSOModalOpen}
+        onClose={() => setIsSOModalOpen(false)}
+        products={products}
       />
 
       {/* Floating Cart Button for Mobile */}
@@ -858,14 +979,14 @@ export default function App() {
             className="flex h-12 items-center gap-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white px-4 shadow-lg shadow-slate-900/40 active:scale-95 border border-slate-700 transition-all cursor-pointer font-sans"
           >
             <div className="relative flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-amber-400" />
+              <ClipboardList className="h-5 w-5 text-amber-400" />
               <span className="absolute -top-2.5 -right-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-slate-950 border border-slate-900 shadow-xs">
                 {totalCartQty}
               </span>
             </div>
             <div className="text-left leading-tight pr-1">
-              <span className="block text-[8px] font-extrabold text-slate-400 uppercase tracking-widest">Kalkulator</span>
-              <span className="text-xs font-black text-amber-400">{formatRupiah(totalCartPrice)}</span>
+              <span className="block text-[8px] font-extrabold text-slate-400 uppercase tracking-widest">Pencocokan</span>
+              <span className="text-xs font-black text-amber-400">{totalCartQty} barang keluar</span>
             </div>
           </button>
         </div>
