@@ -323,9 +323,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                             <span className="text-[10px] font-extrabold text-teal-700 tracking-wider uppercase block mb-2">Planet Gadget</span>
                             <div className="space-y-2">
                               {[
-                                { label: 'PG Teuku Umar (PG1)', val: product.stockPG1 ?? 0 },
-                                { label: 'PG Gatot Subroto (PG2)', val: product.stockPG2 ?? 0 },
-                                { label: 'PG Sunset Road (PG3)', val: product.stockPG3 ?? 0 },
+                                { label: 'PG Denpasar 1 (PG1)', val: product.stockPG1 ?? 0 },
+                                { label: 'PG Denpasar 2 (PG2)', val: product.stockPG2 ?? 0 },
+                                { label: 'PG Denpasar 3 (PG3)', val: product.stockPG3 ?? 0 },
                               ].map((item, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-xs">
                                   <span className="text-slate-500 font-medium">{item.label}</span>

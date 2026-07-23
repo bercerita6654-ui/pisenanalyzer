@@ -17,9 +17,9 @@ interface CartCalculatorProps {
 }
 
 const BRANCHES = [
-  { id: 'stockPG1', name: 'Planet Gadget Teuku Umar (PG1)', short: 'PG TU', company: 'Planet Gadget' },
-  { id: 'stockPG2', name: 'Planet Gadget Gatot Subroto (PG2)', short: 'PG Gatsu', company: 'Planet Gadget' },
-  { id: 'stockPG3', name: 'Planet Gadget Sunset Road (PG3)', short: 'PG Sunset', company: 'Planet Gadget' },
+  { id: 'stockPG1', name: 'Planet Gadget Denpasar 1 (PG1)', short: 'PG Denpasar 1', company: 'Planet Gadget' },
+  { id: 'stockPG2', name: 'Planet Gadget Denpasar 2 (PG2)', short: 'PG Denpasar 2', company: 'Planet Gadget' },
+  { id: 'stockPG3', name: 'Planet Gadget Denpasar 3 (PG3)', short: 'PG Denpasar 3', company: 'Planet Gadget' },
   { id: 'stockCWTU', name: 'Cellular World Teuku Umar', short: 'CW TU', company: 'Cellular World' },
   { id: 'stockCWInfinity', name: 'Cellular World Infinity Gatsu', short: 'CW Infi', company: 'Cellular World' },
   { id: 'stockCWCanggu', name: 'Cellular World Canggu', short: 'CW Cg', company: 'Cellular World' },

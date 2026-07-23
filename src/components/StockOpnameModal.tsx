@@ -20,9 +20,9 @@ const INDONESIAN_MONTHS = [
 
 const BRANCHES = [
   { id: 'none', name: 'Tanpa Stok Sistem (Formulir Kosong / Manual)' },
-  { id: 'stockPG1', name: 'Planet Gadget Teuku Umar (PG1)' },
-  { id: 'stockPG2', name: 'Planet Gadget Gatot Subroto (PG2)' },
-  { id: 'stockPG3', name: 'Planet Gadget Sunset Road (PG3)' },
+  { id: 'stockPG1', name: 'Planet Gadget Denpasar 1 (PG1)' },
+  { id: 'stockPG2', name: 'Planet Gadget Denpasar 2 (PG2)' },
+  { id: 'stockPG3', name: 'Planet Gadget Denpasar 3 (PG3)' },
   { id: 'stockCWTU', name: 'Cellular World Teuku Umar' },
   { id: 'stockCWInfinity', name: 'Cellular World Infinity Gatsu' },
   { id: 'stockCWCanggu', name: 'Cellular World Canggu' },

@@ -373,7 +373,7 @@ export default function App() {
         if ((currentProduct.stockPG1 ?? 0) !== stocks.pg1) {
           changes.push({
             field: 'stockPG1',
-            label: 'PG Teuku Umar (PG1)',
+            label: 'PG Denpasar 1 (PG1)',
             oldValue: currentProduct.stockPG1 ?? 0,
             newValue: stocks.pg1
           });
@@ -381,7 +381,7 @@ export default function App() {
         if ((currentProduct.stockPG2 ?? 0) !== stocks.pg2) {
           changes.push({
             field: 'stockPG2',
-            label: 'PG Gatot Subroto (PG2)',
+            label: 'PG Denpasar 2 (PG2)',
             oldValue: currentProduct.stockPG2 ?? 0,
             newValue: stocks.pg2
           });
@@ -389,7 +389,7 @@ export default function App() {
         if ((currentProduct.stockPG3 ?? 0) !== stocks.pg3) {
           changes.push({
             field: 'stockPG3',
-            label: 'PG Sunset Road (PG3)',
+            label: 'PG Denpasar 3 (PG3)',
             oldValue: currentProduct.stockPG3 ?? 0,
             newValue: stocks.pg3
           });
