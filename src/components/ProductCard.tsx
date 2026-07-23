@@ -243,18 +243,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           e.stopPropagation();
           onToggleFavorite();
         }}
-        className={`absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 backdrop-blur-xs shadow-sm transition-transform active:scale-95 hover:scale-105 ${
+        className={`absolute top-1.5 right-1.5 xs:top-2 xs:right-2 z-10 flex h-6 w-6 xs:h-7 xs:w-7 items-center justify-center rounded-full bg-white/95 backdrop-blur-xs shadow-sm transition-transform active:scale-95 hover:scale-105 ${
           isFavorite ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500'
         }`}
         title={isFavorite ? 'Hapus dari Favorit' : 'Tambah ke Favorit'}
       >
-        <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-rose-500' : ''}`} />
+        <Heart className={`h-3 w-3 xs:h-3.5 xs:w-3.5 ${isFavorite ? 'fill-rose-500' : ''}`} />
       </button>
 
       {/* Product Image Area */}
       <div 
         onClick={onViewDetails}
-        className="relative flex aspect-square w-full cursor-pointer items-center justify-center bg-slate-50 p-4 overflow-hidden group-hover:bg-slate-100/10"
+        className="relative flex aspect-square w-full cursor-pointer items-center justify-center bg-slate-50 p-2.5 xs:p-3 sm:p-4 overflow-hidden group-hover:bg-slate-100/10"
       >
         <img
           src={product.imageUrl}
@@ -268,20 +268,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Hover overlay for quick view */}
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/5 opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="flex items-center gap-1 rounded-full bg-slate-900/85 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg">
-            <Eye className="h-3 w-3" /> Lihat Detail
+          <span className="flex items-center gap-1 rounded-full bg-slate-900/85 px-2 xs:px-2.5 py-0.5 xs:py-1 text-[8px] xs:text-[10px] font-bold text-white shadow-lg">
+            <Eye className="h-2.5 w-2.5 xs:h-3 xs:w-3" /> Detail
           </span>
         </div>
       </div>
 
       {/* Card Info Content */}
-      <div className="flex flex-1 flex-col p-3">
+      <div className="flex flex-1 flex-col p-2 xs:p-3">
         {/* Category & Stock */}
-        <div className="mb-1.5 flex items-center justify-between gap-1.5">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 truncate" title={product.category}>
+        <div className="mb-1 xs:mb-1.5 flex items-center justify-between gap-1">
+          <span className="text-[8px] xs:text-[9px] font-bold uppercase tracking-wider text-slate-400 truncate max-w-[50%]" title={product.category}>
             {product.category}
           </span>
-          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shrink-0 ${
+          <span className={`text-[8px] xs:text-[9px] font-extrabold px-1 xs:px-1.5 py-0.5 rounded-md shrink-0 ${
             totalStock > 3 ? 'text-emerald-700 bg-emerald-50' : totalStock > 0 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
           }`} title="Total Stok Cabang">
             Stok: {totalStock}
@@ -291,41 +291,39 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Title */}
         <h3
           onClick={onViewDetails}
-          className={`cursor-pointer font-bold text-slate-800 transition-colors hover:text-amber-600 leading-snug line-clamp-2 ${
-            isDenseMode ? 'text-2xs min-h-[30px]' : 'text-xs min-h-[36px]'
-          }`}
+          className={`cursor-pointer font-bold text-slate-800 transition-colors hover:text-amber-600 leading-snug line-clamp-2 text-[10px] xs:text-[11px] sm:text-xs min-h-[28px] xs:min-h-[32px] sm:min-h-[36px]`}
           title={product.name}
         >
           {product.name}
         </h3>
 
         {/* Barcode SKU */}
-        <div className="mt-1 flex items-center justify-between text-[9px] text-slate-400 font-mono">
-          <span>SKU: {product.barcode}</span>
+        <div className="mt-0.5 xs:mt-1 flex items-center justify-between text-[8px] xs:text-[9px] text-slate-400 font-mono truncate max-w-full">
+          <span className="truncate">SKU: {product.barcode}</span>
         </div>
 
         {/* Pricing Comparison Panel */}
-        <div className="mt-3.5 flex-1 flex flex-col justify-end border-t border-slate-100/80 pt-2.5">
+        <div className="mt-2 xs:mt-3.5 flex-1 flex flex-col justify-end border-t border-slate-100/80 pt-2 xs:pt-2.5">
           {cheapestPrice > 0 ? (
             <div className="space-y-0.5">
               
               {/* Original Price & Discount percentage banner */}
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] line-through text-slate-400 font-medium">
+              <div className="flex flex-wrap items-center gap-1 text-[8px] xs:text-[9px] sm:text-[10px]">
+                <span className="line-through text-slate-400 font-medium">
                   {formatRupiah(originalPrice)}
                 </span>
-                <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-1 rounded-xs">
+                <span className="font-black text-rose-600 bg-rose-50 px-0.5 xs:px-1 rounded-xs">
                   -{discountPercent}%
                 </span>
               </div>
               
               {/* Actual price */}
               <div className="flex flex-wrap items-baseline gap-1">
-                <span className={`font-black text-amber-600 ${isDenseMode ? 'text-xs' : 'text-sm'}`}>
+                <span className={`font-black text-amber-600 text-2xs xs:text-xs sm:text-sm md:text-base`}>
                   {formatRupiah(cheapestPrice)}
                 </span>
                 {cheapestStore && cheapestStore !== 'Sama' && (
-                  <span className="text-[8px] font-black text-slate-500 bg-slate-100 px-1 py-0.1 rounded-xs" title={`Paling hemat di ${cheapestStore}`}>
+                  <span className="text-[7px] xs:text-[8px] font-black text-slate-500 bg-slate-100 px-1 py-0.1 rounded-xs whitespace-nowrap shrink-0" title={`Paling hemat di ${cheapestStore}`}>
                     di {cheapestStore === 'Planet Gadget' ? 'PG' : 'CW'}
                   </span>
                 )}
@@ -334,36 +332,36 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Other store comparing details */}
               <div className="flex flex-col gap-0.5 mt-1 border-t border-dashed border-slate-100 pt-1">
                 {otherPrice > 0 ? (
-                  <div className="flex items-center justify-between text-[9px] text-slate-400">
-                    <span className="truncate max-w-[65px]">{otherStore}:</span>
-                    <span className="font-semibold line-through">
+                  <div className="flex items-center justify-between text-[8px] xs:text-[9px] text-slate-400 gap-1 w-full">
+                    <span className="truncate max-w-[65px]">{otherStore === 'Planet Gadget' ? 'PG' : 'CW'}:</span>
+                    <span className="font-semibold line-through shrink-0">
                       {formatRupiah(otherPrice)}
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between text-[9px] text-slate-400">
-                    <span>Harga sama di PG & CW</span>
+                  <div className="flex items-center justify-between text-[8px] xs:text-[9px] text-slate-400 gap-1 w-full">
+                    <span className="truncate">Harga sama di PG & CW</span>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="text-[10px] text-slate-400 italic py-1">Harga tidak tersedia</div>
+            <div className="text-[8px] xs:text-[10px] text-slate-400 italic py-1">Harga tidak tersedia</div>
           )}
         </div>
 
         {/* Bottom Actions */}
-        <div className="mt-3 flex items-center border-t border-slate-100 pt-2">
+        <div className="mt-2 xs:mt-3 flex items-center border-t border-slate-100 pt-2">
           <button
             id={`add-cart-btn-${product.barcode}`}
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart();
             }}
-            className="flex h-8 w-full items-center justify-center gap-1 rounded-xl bg-slate-900 text-white font-black text-xs shadow-xs transition-all hover:bg-amber-500 hover:text-slate-950 active:scale-95 cursor-pointer"
+            className="flex h-7 xs:h-8 w-full items-center justify-center gap-1 rounded-lg xs:rounded-xl bg-slate-900 text-white font-black text-[9px] xs:text-2xs sm:text-xs shadow-xs transition-all hover:bg-amber-500 hover:text-slate-950 active:scale-95 cursor-pointer whitespace-nowrap px-1 xs:px-2"
             title="Catat barang keluar untuk dicocokkan dengan stok"
           >
-            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <Plus className="h-3 w-3 xs:h-3.5 xs:w-3.5 shrink-0" />
             <span>Catat Keluar</span>
           </button>
         </div>
