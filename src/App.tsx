@@ -21,6 +21,7 @@ import { AddProductModal } from './components/AddProductModal';
 import { StockOpnameModal } from './components/StockOpnameModal';
 import { SearchScannerModal } from './components/SearchScannerModal';
 import { UpdateStockModal } from './components/UpdateStockModal';
+import { initAuth, User } from './utils/auth';
 import { 
   Search, 
   Grid, 
@@ -109,6 +110,24 @@ export default function App() {
   const [selectedUpdateBarcode, setSelectedUpdateBarcode] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'catalog' | 'reconciliation' | 'scanner'>('catalog');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Auth & Access Token State
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (currentUser, token) => {
+        setUser(currentUser);
+        setAccessToken(token);
+      },
+      () => {
+        setUser(null);
+        setAccessToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Trigger sound feedback when products are loaded or updated
   const triggerHapticSuccess = () => {
@@ -991,6 +1010,8 @@ export default function App() {
         }}
         products={products}
         initialProductBarcode={selectedUpdateBarcode}
+        user={user}
+        accessToken={accessToken}
         onSaveStock={(barcode, pgPrice, cwPrice, stocks) => {
           handleLocalUpdateProduct(barcode, pgPrice, cwPrice, stocks);
           triggerHapticSuccess();
