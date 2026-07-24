@@ -2,6 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+export type { User };
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
