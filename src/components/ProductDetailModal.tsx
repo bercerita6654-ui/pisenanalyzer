@@ -161,7 +161,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 8 }}
           transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="relative z-10 flex h-full max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl md:h-auto"
+          className="relative z-10 flex h-auto max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 shrink-0">
@@ -185,30 +185,32 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
 
           {/* Navigation Tab Bar */}
-          <div className="flex border-b border-slate-100 px-6 bg-slate-50/50 shrink-0">
+          <div className="flex border-b border-slate-100 px-3 sm:px-6 bg-slate-50/50 shrink-0 overflow-x-auto scrollbar-none whitespace-nowrap">
             <button
               onClick={() => setActiveTab('info')}
-              className={`flex items-center gap-2 py-3 px-4 border-b-2 font-extrabold text-xs tracking-wider uppercase transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2.5 sm:px-4 border-b-2 font-bold sm:font-extrabold text-[10px] sm:text-xs tracking-wider uppercase transition-all cursor-pointer shrink-0 ${
                 activeTab === 'info'
                   ? 'border-amber-500 text-slate-900'
                   : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Boxes className="h-4 w-4 text-slate-400" />
-              <span>Informasi & Stok</span>
+              <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 shrink-0" />
+              <span className="hidden xs:inline">Informasi & Stok</span>
+              <span className="xs:hidden">Info & Stok</span>
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 py-3 px-4 border-b-2 font-extrabold text-xs tracking-wider uppercase transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2.5 sm:px-4 border-b-2 font-bold sm:font-extrabold text-[10px] sm:text-xs tracking-wider uppercase transition-all cursor-pointer shrink-0 ${
                 activeTab === 'history'
                   ? 'border-amber-500 text-slate-900'
                   : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Clock className="h-4 w-4 text-slate-400" />
-              <span>Riwayat Perubahan</span>
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 shrink-0" />
+              <span className="hidden xs:inline">Riwayat Perubahan</span>
+              <span className="xs:hidden">Riwayat</span>
               {history.length > 0 && (
-                <span className="ml-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-slate-950 border border-amber-100 shadow-xs">
+                <span className="ml-1 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-amber-500 text-[9px] sm:text-[10px] font-black text-slate-950 border border-amber-100 shadow-xs shrink-0">
                   {history.length}
                 </span>
               )}
@@ -219,10 +221,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div className="flex-1 overflow-y-auto p-6 md:p-8">
             {activeTab === 'info' ? (
               /* PANEL A: Informasi & Stok (Classic Detail View) */
-              <div className="grid gap-6 md:grid-cols-12">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 {/* Left Column: Product Photo & Barcode Generator */}
-                <div className="md:col-span-5 flex flex-col items-center">
-                  <div className="relative aspect-square w-full rounded-xl bg-slate-50/70 p-4 border border-slate-100 flex items-center justify-center overflow-hidden">
+                <div className="col-span-1 md:col-span-5 flex flex-col items-center">
+                  <div className="relative w-36 h-36 xs:w-44 xs:h-44 md:w-full md:h-auto md:aspect-square rounded-xl bg-slate-50/70 p-3 sm:p-4 border border-slate-100 flex items-center justify-center overflow-hidden mx-auto">
                     <img
                       src={product.imageUrl}
                       alt={product.name}
@@ -234,7 +236,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
 
                   {/* Sleek Barcode Display */}
-                  <div className="mt-4 w-full rounded-xl border border-slate-100 bg-white p-3 text-center shadow-2xs">
+                  <div className="mt-3 md:mt-4 w-full max-w-[240px] md:max-w-none rounded-xl border border-slate-100 bg-white p-2.5 sm:p-3 text-center shadow-2xs">
                     <div className="flex h-10 items-stretch justify-center gap-[1.2px] bg-white px-2">
                       {barcodeBars.map((bar, idx) => (
                         <div 
@@ -262,7 +264,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
 
                 {/* Right Column: Descriptions, Prices, and Local Editing */}
-                <div className="md:col-span-7 flex flex-col justify-between">
+                <div className="col-span-1 md:col-span-7 flex flex-col justify-between">
                   <div>
                     <h2 className="text-lg md:text-xl font-bold text-slate-900 leading-snug">
                       {product.name}

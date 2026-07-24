@@ -15,7 +15,8 @@ import {
   StopCircle, 
   RefreshCw,
   CheckCircle2,
-  Tv
+  Tv,
+  Layers
 } from 'lucide-react';
 import { Product } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,9 +25,10 @@ import { Html5Qrcode } from 'html5-qrcode';
 interface BarcodeFinderProps {
   products: Product[];
   onScanSuccess: (product: Product) => void;
+  onAddToCart?: (product: Product) => void;
 }
 
-export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSuccess }) => {
+export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSuccess, onAddToCart }) => {
   const [activeMode, setActiveMode] = useState<'camera' | 'simulation'>('camera');
   const [selectedBarcode, setSelectedBarcode] = useState('');
   const [isSimulating, setIsSimulating] = useState(false);
@@ -34,6 +36,21 @@ export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSu
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [scanSuccessText, setScanSuccessText] = useState('');
+
+  // Batch Mode States & Refs
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  interface BatchScannedItem {
+    product: Product;
+    quantity: number;
+    timestamp: Date;
+  }
+  const [batchScannedItems, setBatchScannedItems] = useState<BatchScannedItem[]>([]);
+  const lastScannedRef = useRef<{ barcode: string; time: number } | null>(null);
+  const isBatchModeRef = useRef(false);
+
+  useEffect(() => {
+    isBatchModeRef.current = isBatchMode;
+  }, [isBatchMode]);
 
   // Camera states
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -183,13 +200,49 @@ export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSu
     );
 
     if (matched) {
-      playBeep();
-      setScanSuccessText(`Berhasil terdeteksi: ${matched.name}`);
-      setErrorMessage('');
-      
-      // Auto close camera stream to prevent annoying multi-triggers, then open detail modal
-      stopCamera();
-      onScanSuccess(matched);
+      if (isBatchModeRef.current) {
+        // Cooldown to prevent multi-triggering the same barcode on camera frames
+        const now = Date.now();
+        if (lastScannedRef.current && lastScannedRef.current.barcode === matched.barcode && now - lastScannedRef.current.time < 2000) {
+          return;
+        }
+        lastScannedRef.current = { barcode: matched.barcode, time: now };
+        
+        playBeep();
+        
+        // Visual feedback
+        setScanSuccessText(`[BATCH] Berhasil terdeteksi: +1 ${matched.name}`);
+        setErrorMessage('');
+        
+        // Auto-clear success text after 2.5 seconds
+        setTimeout(() => setScanSuccessText((current) => current.includes(matched.name) ? '' : current), 2500);
+
+        // Add to batch scanned list
+        setBatchScannedItems((prev) => {
+          const existing = prev.find((item) => item.product.barcode === matched.barcode);
+          if (existing) {
+            return prev.map((item) =>
+              item.product.barcode === matched.barcode
+                ? { ...item, quantity: item.quantity + 1, timestamp: new Date() }
+                : item
+            ).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          }
+          return [{ product: matched, quantity: 1, timestamp: new Date() }, ...prev];
+        });
+
+        // Trigger onAddToCart directly if passed
+        if (onAddToCart) {
+          onAddToCart(matched);
+        }
+      } else {
+        playBeep();
+        setScanSuccessText(`Berhasil terdeteksi: ${matched.name}`);
+        setErrorMessage('');
+        
+        // Auto close camera stream to prevent annoying multi-triggers, then open detail modal
+        stopCamera();
+        onScanSuccess(matched);
+      }
     } else {
       // Set error message but do NOT turn off camera, allowing them to try again
       setErrorMessage(`Barcode "${code}" terdeteksi, namun tidak terdaftar di katalog Pisen.`);
@@ -211,8 +264,30 @@ export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSu
       setIsSimulating(false);
       
       if (matched) {
-        playBeep();
-        onScanSuccess(matched);
+        if (isBatchMode) {
+          playBeep();
+          setScanSuccessText(`[BATCH] Berhasil terdeteksi: +1 ${matched.name}`);
+          setErrorMessage('');
+          
+          setBatchScannedItems((prev) => {
+            const existing = prev.find((item) => item.product.barcode === matched.barcode);
+            if (existing) {
+              return prev.map((item) =>
+                item.product.barcode === matched.barcode
+                  ? { ...item, quantity: item.quantity + 1, timestamp: new Date() }
+                  : item
+              ).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+            }
+            return [{ product: matched, quantity: 1, timestamp: new Date() }, ...prev];
+          });
+
+          if (onAddToCart) {
+            onAddToCart(matched);
+          }
+        } else {
+          playBeep();
+          onScanSuccess(matched);
+        }
       } else {
         setErrorMessage('Barcode tidak terdaftar dalam sistem Pisen.');
       }
@@ -230,9 +305,32 @@ export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSu
     );
     
     if (matched) {
-      playBeep();
-      onScanSuccess(matched);
-      setManualInput('');
+      if (isBatchMode) {
+        playBeep();
+        setScanSuccessText(`[BATCH] Berhasil terdeteksi: +1 ${matched.name}`);
+        setErrorMessage('');
+        
+        setBatchScannedItems((prev) => {
+          const existing = prev.find((item) => item.product.barcode === matched.barcode);
+          if (existing) {
+            return prev.map((item) =>
+              item.product.barcode === matched.barcode
+                ? { ...item, quantity: item.quantity + 1, timestamp: new Date() }
+                : item
+            ).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          }
+          return [{ product: matched, quantity: 1, timestamp: new Date() }, ...prev];
+        });
+
+        if (onAddToCart) {
+          onAddToCart(matched);
+        }
+        setManualInput('');
+      } else {
+        playBeep();
+        onScanSuccess(matched);
+        setManualInput('');
+      }
     } else {
       setErrorMessage(`Barcode "${manualInput}" tidak ditemukan.`);
     }
@@ -251,28 +349,61 @@ export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSu
           <p className="text-3xs text-slate-400 mt-0.5">Pindai kode produk Pisen fisik di gerai Planet Gadget / Cellular World.</p>
         </div>
 
-        {/* Audio feedback setting */}
-        <button
-          id="toggle-sound-btn"
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          className={`flex self-start sm:self-center h-8 px-2.5 items-center gap-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            soundEnabled ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-          }`}
-          title={soundEnabled ? 'Matikan Suara Beep' : 'Nyalakan Suara Beep'}
-        >
-          {soundEnabled ? (
-            <>
-              <Volume2 className="h-4 w-4" />
-              <span>Beep Aktif</span>
-            </>
-          ) : (
-            <>
-              <VolumeX className="h-4 w-4" />
-              <span>Beep Mati</span>
-            </>
-          )}
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+          {/* Batch Mode toggle */}
+          <button
+            id="toggle-batch-btn"
+            onClick={() => {
+              setIsBatchMode(!isBatchMode);
+              setScanSuccessText('');
+              setErrorMessage('');
+            }}
+            className={`flex h-8 px-2.5 items-center gap-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              isBatchMode 
+                ? 'bg-teal-50 text-teal-600 hover:bg-teal-100 border border-teal-200' 
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-transparent'
+            }`}
+            title={isBatchMode ? 'Matikan Mode Beruntun' : 'Aktifkan Mode Beruntun'}
+          >
+            <Layers className={`h-4 w-4 ${isBatchMode ? 'animate-pulse' : ''}`} />
+            <span>Mode Beruntun: {isBatchMode ? 'AKTIF 🚀' : 'MATI'}</span>
+          </button>
+
+          {/* Audio feedback setting */}
+          <button
+            id="toggle-sound-btn"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`flex h-8 px-2.5 items-center gap-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              soundEnabled ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+            }`}
+            title={soundEnabled ? 'Matikan Suara Beep' : 'Nyalakan Suara Beep'}
+          >
+            {soundEnabled ? (
+              <>
+                <Volume2 className="h-4 w-4" />
+                <span>Beep Aktif</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="h-4 w-4" />
+                <span>Beep Mati</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {isBatchMode && (
+        <div className="mt-3 bg-teal-50/50 border border-teal-100 rounded-xl p-3 flex items-start gap-2.5 text-xs text-teal-800">
+          <Sparkles className="h-4 w-4 text-teal-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <span className="font-bold">Mode Beruntun (Batch Mode) Aktif</span>
+            <p className="text-[10px] text-teal-600 leading-normal">
+              Setiap kali produk terdeteksi, scanner akan berbunyi beep dan langsung memasukkannya ke daftar barang keluar dengan kuantitas +1 secara otomatis tanpa menghentikan kamera live.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Mode Selector Tabs */}
       <div className="mt-4 grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
@@ -596,13 +727,69 @@ export const BarcodeFinder: React.FC<BarcodeFinderProps> = ({ products, onScanSu
                 <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
                 <span>
                   {activeMode === 'camera' 
-                    ? 'Arahkan kamera ke barcode Pisen. Hasil pemindaian akan berbunyi beep keras dan memunculkan pop-up spesifikasi produk.' 
+                    ? (isBatchMode 
+                        ? 'Arahkan kamera ke barcode produk. Scanner akan otomatis memproses pemindaian terus-menerus tanpa henti.'
+                        : 'Arahkan kamera ke barcode Pisen. Hasil pemindaian akan berbunyi beep keras dan memunculkan pop-up spesifikasi produk.')
                     : 'Pilih barcode atau masukkan kode manual untuk mensimulasikan scanner kasir.'}
                 </span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {/* Batch Mode Scanned History List */}
+        {isBatchMode && batchScannedItems.length > 0 && (
+          <div className="mt-6 border-t border-slate-150 pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Layers className="h-4 w-4 text-teal-600" />
+                Hasil Pemindaian Sesi Ini ({batchScannedItems.reduce((acc, curr) => acc + curr.quantity, 0)} Pcs)
+              </h4>
+              <button
+                id="clear-batch-history-btn"
+                onClick={() => setBatchScannedItems([])}
+                className="text-[10px] text-slate-500 hover:text-rose-600 transition-colors font-extrabold uppercase tracking-wider border border-slate-200 hover:border-rose-200 rounded-md px-2 py-1 bg-white cursor-pointer"
+              >
+                Hapus Riwayat Sesi
+              </button>
+            </div>
+            
+            <div className="rounded-xl border border-slate-150 bg-slate-50 p-2 overflow-hidden">
+              <div className="max-h-[220px] overflow-y-auto divide-y divide-slate-100 space-y-1 pr-1">
+                {batchScannedItems.map(({ product, quantity, timestamp }) => (
+                  <div key={product.barcode} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-100 shadow-3xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-9 w-9 rounded-md object-contain border bg-white p-0.5 shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=60';
+                        }}
+                      />
+                      <div className="min-w-0">
+                        <h5 className="text-xs font-bold text-slate-800 truncate max-w-[180px] sm:max-w-md leading-tight">
+                          {product.name}
+                        </h5>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono text-slate-400 font-medium">{product.barcode}</span>
+                          <span className="text-[9px] text-slate-300 font-mono">• {timestamp.toLocaleTimeString('id-ID')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 pl-4">
+                      <span className="text-2xs text-slate-400 font-medium font-mono">Qty:</span>
+                      <span className="h-6 min-w-8 px-2 flex items-center justify-center rounded-md bg-teal-50 border border-teal-150 text-xs font-extrabold text-teal-700 font-mono">
+                        x{quantity}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 

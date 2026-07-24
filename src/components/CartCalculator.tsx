@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
-import { ClipboardList, Trash2, Plus, Minus, CheckCircle2, AlertTriangle, RefreshCw, Layers, Check, Search, ArrowRightLeft } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ClipboardList, Trash2, Plus, Minus, CheckCircle2, AlertTriangle, RefreshCw, Layers, Check, Search, ArrowRightLeft, Database, LogOut, Send, Cloud, CheckSquare, X } from 'lucide-react';
 import { CartItem, Product } from '../types';
 import { formatRupiah } from '../utils/csv';
 import { motion, AnimatePresence } from 'motion/react';
+import { initAuth, googleSignIn, logout as googleSignOut } from '../utils/auth';
+import { appendStockOpnameToSheets } from '../utils/googleSheets';
+import { User } from 'firebase/auth';
 
 interface CartCalculatorProps {
   items: CartItem[];
@@ -34,6 +37,86 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
   onClearCart,
 }) => {
   const [selectedBranch, setSelectedBranch] = useState<BranchId>('stockPG1');
+  
+  // Google Auth & Sheets States
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error' | null; message: string | null }>({ type: null, message: null });
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (currentUser, token) => {
+        setUser(currentUser);
+        setAccessToken(token);
+      },
+      () => {
+        setUser(null);
+        setAccessToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      setSyncStatus({ type: null, message: null });
+      const res = await googleSignIn();
+      if (res) {
+        setUser(res.user);
+        setAccessToken(res.accessToken);
+      }
+    } catch (error: any) {
+      console.error(error);
+      setSyncStatus({ type: 'error', message: 'Gagal melakukan login Google: ' + (error.message || error) });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await googleSignOut();
+      setUser(null);
+      setAccessToken(null);
+      setSyncStatus({ type: null, message: null });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleSyncToSheets = async () => {
+    if (!accessToken) {
+      setSyncStatus({ type: 'error', message: 'Silakan hubungkan akun Google Anda terlebih dahulu.' });
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus({ type: null, message: null });
+
+    try {
+      const activeBranchObj = BRANCHES.find((b) => b.id === selectedBranch);
+      const branchName = activeBranchObj ? activeBranchObj.name : selectedBranch;
+
+      const res = await appendStockOpnameToSheets(
+        items,
+        selectedBranch,
+        branchName,
+        user?.email || null,
+        accessToken
+      );
+
+      if (res.success) {
+        setSyncStatus({ type: 'success', message: res.message });
+        setShowConfirmDialog(false);
+      } else {
+        setSyncStatus({ type: 'error', message: res.message });
+      }
+    } catch (error: any) {
+      setSyncStatus({ type: 'error', message: error.message || 'Terjadi kesalahan saat sinkronisasi.' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Calculate overall statistics
   const totalQuantity = useMemo(() => {
@@ -116,7 +199,7 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
         <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2">
           Pilih Cabang Evaluasi (Stok Sistem)
         </label>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
           {BRANCHES.map((b) => (
             <button
               key={b.id}
@@ -160,68 +243,71 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
                 }`}
               >
                 {/* Product Detail Info Row */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-3xs">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <img
                       src={item.product.imageUrl}
                       alt={item.product.name}
                       referrerPolicy="no-referrer"
-                      className="h-8 w-8 rounded-md object-contain bg-white border border-slate-150 shrink-0"
+                      className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-contain bg-white border border-slate-150 shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=60';
                       }}
                     />
                     <div className="min-w-0 flex-1">
-                      <h5 className="truncate text-2xs font-extrabold text-slate-800" title={item.product.name}>
+                      <h5 className="text-xs sm:text-sm font-extrabold text-slate-800 leading-normal whitespace-normal break-words" title={item.product.name}>
                         {item.product.name}
                       </h5>
-                      <span className="block font-mono text-[9px] text-slate-400">Barcode: {item.product.barcode}</span>
+                      <span className="block font-mono text-[10px] text-slate-400 mt-0.5 font-medium">Barcode: {item.product.barcode}</span>
                     </div>
                   </div>
 
                   {/* Quantity Controls */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex items-center rounded-md border border-slate-200 bg-white p-0.5">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t border-slate-50 sm:border-none">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider sm:hidden">Jumlah Keluar</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
+                        <button
+                          onClick={() => onUpdateQuantity(item.product.barcode, item.quantity - 1)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-6 text-center text-xs font-extrabold text-slate-800">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => onUpdateQuantity(item.product.barcode, item.quantity + 1)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+
                       <button
-                        onClick={() => onUpdateQuantity(item.product.barcode, item.quantity - 1)}
-                        className="flex h-5 w-5 items-center justify-center rounded text-slate-500 hover:bg-slate-100"
+                        onClick={() => onRemoveItem(item.product.barcode)}
+                        className="text-slate-400 hover:text-rose-600 p-1.5 transition-colors border border-slate-100 hover:border-rose-100 hover:bg-rose-50 rounded-lg cursor-pointer"
+                        title="Hapus"
                       >
-                        <Minus className="h-2.5 w-2.5" />
-                      </button>
-                      <span className="w-5 text-center text-2xs font-bold text-slate-800">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => onUpdateQuantity(item.product.barcode, item.quantity + 1)}
-                        className="flex h-5 w-5 items-center justify-center rounded text-slate-500 hover:bg-slate-100"
-                      >
-                        <Plus className="h-2.5 w-2.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
-
-                    <button
-                      onClick={() => onRemoveItem(item.product.barcode)}
-                      className="text-slate-400 hover:text-rose-500 p-1 transition-colors"
-                      title="Hapus"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
                   </div>
                 </div>
 
                 {/* Stock Matching Status Grid */}
                 <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-2 text-center text-[10px]">
                   <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase">Stok Sistem</span>
-                    <span className="font-extrabold text-slate-700">{stockSystem} pcs</span>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase" style={{ fontSize: '11px' }}>Stok Sistem</span>
+                    <span className="font-extrabold text-slate-700" style={{ fontSize: '16px' }}>{stockSystem} pcs</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase">Qty Keluar</span>
-                    <span className="font-extrabold text-slate-700">{item.quantity} pcs</span>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase" style={{ fontSize: '11px' }}>Qty Keluar</span>
+                    <span className="font-extrabold text-slate-700" style={{ fontSize: '16px' }}>{item.quantity} pcs</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase">Stok Balance</span>
-                    <span className={`font-extrabold ${balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase" style={{ fontSize: '11px' }}>Stok Balance</span>
+                    <span className={`font-extrabold ${balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} style={{ fontSize: '16px' }}>
                       {balance} pcs
                     </span>
                   </div>
@@ -233,12 +319,12 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
                     {isSufficient ? (
                       <>
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                        <span className="text-emerald-700 font-bold">Matching (Aman)</span>
+                        <span className="text-emerald-700 font-bold" style={{ fontSize: '13px' }}>Matching (Aman)</span>
                       </>
                     ) : (
                       <>
                         <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />
-                        <span className="text-rose-700 font-bold">⚠️ Selisih Kurang {Math.abs(balance)} pcs</span>
+                        <span className="text-rose-700 font-bold" style={{ fontSize: '13px' }}>⚠️ Selisih Kurang {Math.abs(balance)} pcs</span>
                       </>
                     )}
                   </div>
@@ -295,17 +381,17 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
         </div>
 
         {reconciliationData.allSufficient ? (
-          <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3.5 flex items-start gap-2.5">
+          <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3.5 flex items-start gap-2.5" style={{ height: '146.305px', fontSize: '12px' }}>
             <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-            <div className="text-xs text-emerald-800 leading-relaxed">
+            <div className="text-xs text-emerald-800 leading-relaxed" style={{ fontSize: '12px' }}>
               <span className="font-bold block">Sistem & Fisik Cocok (Stok Balance Aman)</span>
               <span>Seluruh barang keluar tercukupi oleh stok sistem yang tersedia di <strong>{activeBranchName}</strong>. Tidak ada selisih negatif.</span>
             </div>
           </div>
         ) : (
-          <div className="rounded-xl bg-amber-50 border border-amber-100 p-3.5 flex items-start gap-2.5">
+          <div className="rounded-xl bg-amber-50 border border-amber-100 p-3.5 flex items-start gap-2.5" style={{ height: '146.305px', fontSize: '12px' }}>
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-800 leading-relaxed">
+            <div className="text-xs text-amber-800 leading-relaxed" style={{ fontSize: '12px' }}>
               <span className="font-bold block text-amber-900">Perhatian: Terdeteksi Selisih Stok</span>
               <span>Terdapat <strong>{reconciliationData.deficientCount} produk</strong> yang stok sistemnya tidak mencukupi jumlah barang keluar di <strong>{activeBranchName}</strong>. Harap lakukan pencocokan ulang atau mutasi barang.</span>
             </div>
@@ -313,10 +399,224 @@ export const CartCalculator: React.FC<CartCalculatorProps> = ({
         )}
 
         {/* Helpful Info Alert */}
-        <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[10px] text-slate-500 leading-normal">
+        <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[10px] text-slate-500 leading-normal mb-4">
           <span>* Pencocokan dilakukan secara langsung terhadap data database lokal cabang. Anda dapat memperbarui stok masing-masing cabang di detail produk dengan menekan tombol edit.</span>
         </div>
+
+        {/* Google Sheets Sync Integration Panel */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3 mt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="h-4.5 w-4.5 text-teal-600 animate-pulse" />
+              <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                Integrasi Google Sheets "SO"
+              </h5>
+            </div>
+            
+            {user && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-rose-600 transition-colors font-semibold"
+                title="Putuskan Akun Google"
+              >
+                <LogOut className="h-3 w-3" />
+                <span>Sign Out</span>
+              </button>
+            )}
+          </div>
+
+          {!user ? (
+            <div className="text-center py-2 space-y-2">
+              <p className="text-[11px] text-slate-500 leading-normal max-w-md mx-auto">
+                Hubungkan ke Google Sheets untuk langsung menginput hasil pencocokan barang keluar ke sheet <strong className="text-teal-700">"SO"</strong> secara otomatis.
+              </p>
+              
+              {/* Google Sign-in Button */}
+              <button
+                onClick={handleLogin}
+                className="gsi-material-button inline-flex items-center justify-center cursor-pointer transition-transform active:scale-95"
+                style={{
+                  backgroundColor: 'white',
+                  border: '1px solid #747775',
+                  borderRadius: '8px',
+                  boxSizing: 'border-box',
+                  color: '#1f1f1f',
+                  fontFamily: 'Roboto, arial, sans-serif',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  height: '36px',
+                  letterSpacing: '0.25px',
+                  outline: 'none',
+                  padding: '0 12px',
+                  position: 'relative',
+                  textAlign: 'center',
+                  verticalAlign: 'middle',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style={{ display: 'block', width: '18px', height: '18px' }}>
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                  </svg>
+                  <span>Hubungkan Google Sheets</span>
+                </div>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-lg px-3 py-1.5 font-medium">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <span className="truncate">Terhubung: <strong>{user.email}</strong></span>
+                </div>
+                <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-md font-bold shrink-0 uppercase">READY</span>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setShowConfirmDialog(true)}
+                  disabled={isSyncing}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] disabled:opacity-50 text-white py-2.5 px-4 font-bold text-xs transition-all shadow-md cursor-pointer"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <span>Mengirim ke Google Sheets...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      <span>Input Pencocokan Ke Google Sheet "SO" 🚀</span>
+                    </>
+                  )}
+                </button>
+                
+                <p className="text-[10px] text-center text-slate-400">
+                  Target Spreadsheet ID: <code className="bg-slate-100 px-1 py-0.5 rounded">1MKWMah...2nurC8</code> (Sheet: <code className="bg-slate-100 px-1 py-0.5 rounded font-bold">SO</code>)
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Sync Status Alert */}
+          {syncStatus.message && (
+            <div className={`p-3 rounded-lg border text-xs leading-relaxed ${
+              syncStatus.type === 'success' 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}>
+              <div className="flex items-start gap-1.5">
+                {syncStatus.type === 'success' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                )}
+                <span>{syncStatus.message}</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Explicit Custom Confirmation Modal Dialog (Required by workspace_integration skill) */}
+      <AnimatePresence>
+        {showConfirmDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-slate-200 overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 p-4 bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <Database className="h-4.5 w-4.5 text-teal-600" />
+                  <span className="font-bold text-slate-800 text-sm">Konfirmasi Input Google Sheet</span>
+                </div>
+                <button 
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-slate-800">
+                      Apakah Anda yakin ingin mengirim data ini ke Spreadsheet?
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-normal">
+                      Tindakan ini akan menginput data barang keluar secara langsung ke sheet <strong className="text-slate-700">"SO"</strong> dengan rincian:
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info Card */}
+                <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3.5 text-xs space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">Cabang Acuan:</span>
+                    <span className="font-bold text-slate-700">{activeBranchName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">Jumlah Produk:</span>
+                    <span className="font-bold text-slate-700">{items.length} Barang</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">Total Qty Keluar:</span>
+                    <span className="font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md">{totalQuantity} pcs</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">Petugas/Akun:</span>
+                    <span className="font-bold text-slate-700 truncate max-w-[200px]" title={user?.email || ''}>{user?.email}</span>
+                  </div>
+                </div>
+
+                {/* Tiny warning */}
+                <p className="text-[10px] text-slate-400 text-center leading-normal">
+                  * Baris baru akan ditambahkan di baris paling bawah pada sheet "SO".
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 p-4 bg-slate-50">
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  disabled={isSyncing}
+                  className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs py-2 px-4 transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSyncToSheets}
+                  disabled={isSyncing}
+                  className="rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-5 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      <span>Mengirim...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3 w-3" />
+                      <span>Ya, Kirim Data</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+

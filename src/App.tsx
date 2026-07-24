@@ -19,6 +19,7 @@ import { ComparisonView } from './components/ComparisonView';
 import { BarcodeFinder } from './components/BarcodeFinder';
 import { AddProductModal } from './components/AddProductModal';
 import { StockOpnameModal } from './components/StockOpnameModal';
+import { SearchScannerModal } from './components/SearchScannerModal';
 import { 
   Search, 
   Grid, 
@@ -36,7 +37,8 @@ import {
   List,
   ShoppingBag,
   ClipboardList,
-  Printer
+  Printer,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -100,7 +102,9 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isSOModalOpen, setIsSOModalOpen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'catalog' | 'scanner'>('catalog');
+  const [isSearchScannerOpen, setIsSearchScannerOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'catalog' | 'reconciliation' | 'scanner'>('catalog');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Trigger sound feedback when products are loaded or updated
   const triggerHapticSuccess = () => {
@@ -334,6 +338,10 @@ export default function App() {
       }
       return [...prev, { product, quantity: 1 }];
     });
+    setToastMessage(`"${product.name}" berhasil dicatat untuk pencocokan keluar.`);
+    const timeoutId = setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
     triggerHapticSuccess();
   };
 
@@ -591,30 +599,54 @@ export default function App() {
 
         {/* Dynamic Navigation Tabs inside Top Header */}
         <div className="max-w-7xl mx-auto px-4 relative z-10 border-t border-white/10 mt-2">
-          <div className="flex gap-4">
+          <div className="flex gap-3 md:gap-6 overflow-x-auto scrollbar-none">
             <button
               id="tab-catalog"
               onClick={() => setActiveTab('catalog')}
-              className={`flex items-center gap-2 py-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 py-3 px-0.5 sm:px-1 text-[11px] sm:text-xs md:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'catalog'
                   ? 'border-amber-500 text-amber-400'
                   : 'border-transparent text-slate-400 hover:text-white'
               }`}
             >
-              <Grid className="h-4 w-4" />
-              Katalog Produk
+              <Grid className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="hidden xs:inline">Katalog Produk</span>
+              <span className="xs:hidden">Katalog</span>
             </button>
+            
+            <button
+              id="tab-reconciliation"
+              onClick={() => setActiveTab('reconciliation')}
+              className={`flex items-center gap-1.5 py-3 px-0.5 sm:px-1 text-[11px] sm:text-xs md:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap relative ${
+                activeTab === 'reconciliation'
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="hidden sm:inline">Pencocokan Barang Keluar</span>
+              <span className="hidden xs:inline sm:hidden">Pencocokan Keluar</span>
+              <span className="xs:hidden">Pencocokan</span>
+              {cartItems.length > 0 && (
+                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">
+                  {cartItems.length}
+                </span>
+              )}
+            </button>
+
             <button
               id="tab-scanner"
               onClick={() => setActiveTab('scanner')}
-              className={`flex items-center gap-2 py-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 py-3 px-0.5 sm:px-1 text-[11px] sm:text-xs md:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'scanner'
                   ? 'border-amber-500 text-amber-400'
                   : 'border-transparent text-slate-400 hover:text-white'
               }`}
             >
-              <Scan className="h-4 w-4" />
-              Simulasi Scanner Barcode
+              <Scan className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="hidden sm:inline">Simulasi Scanner Barcode</span>
+              <span className="hidden xs:inline sm:hidden">Simulasi Scanner</span>
+              <span className="xs:hidden">Simulasi</span>
             </button>
           </div>
         </div>
@@ -647,10 +679,10 @@ export default function App() {
             
             {/* If on CATALOG TAB */}
             {activeTab === 'catalog' && (
-              <div className="grid gap-6 md:grid-cols-12 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                 
                 {/* Left Panel: Catalog Grid & Search Controls */}
-                <div className="md:col-span-8 space-y-6">
+                <div className="col-span-1 md:col-span-12 space-y-6">
                   
                   {/* Search, Filter, Sort Actions */}
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col gap-4">
@@ -665,39 +697,51 @@ export default function App() {
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Cari berdasarkan nama produk atau barcode..."
-                          className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-xs focus:border-amber-400 focus:outline-hidden"
+                          className="w-full rounded-xl border border-slate-200 pl-10 pr-20 py-2.5 text-xs focus:border-amber-400 focus:outline-hidden"
                         />
-                        {searchQuery && (
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                          {searchQuery && (
+                            <button
+                              id="clear-search-btn"
+                              onClick={() => setSearchQuery('')}
+                              className="text-slate-400 hover:text-slate-600 font-bold text-xs h-7 w-7 flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                              X
+                            </button>
+                          )}
                           <button
-                            id="clear-search-btn"
-                            onClick={() => setSearchQuery('')}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+                            id="scan-search-camera-btn"
+                            type="button"
+                            onClick={() => setIsSearchScannerOpen(true)}
+                            className="h-8 px-2 flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-extrabold uppercase transition-all cursor-pointer shadow-3xs hover:scale-[1.03] active:scale-95"
+                            title="Scan Barcode via Kamera HP"
                           >
-                            X
+                            <Scan className="h-3.5 w-3.5" />
+                            <span className="hidden xs:inline">Scan</span>
                           </button>
-                        )}
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {/* Print Stock Opname (SO) Form */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {/* Download Stock Opname (SO) Form */}
                         <button
                           id="open-so-modal"
                           onClick={() => setIsSOModalOpen(true)}
-                          className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs px-4 py-2.5 shadow-2xs transition-all active:scale-98 cursor-pointer w-full sm:w-auto"
-                          title="Cetak Formulir SO (Stock Opname) Bulanan"
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs py-2.5 sm:px-4 shadow-2xs transition-all active:scale-98 cursor-pointer sm:w-auto"
+                          title="Unduh Formulir SO (Stock Opname) Bulanan dalam Format Excel"
                         >
-                          <Printer className="h-4 w-4 text-slate-500" />
-                          <span>Cetak Formulir SO</span>
+                          <FileSpreadsheet className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span className="truncate text-[10px] xs:text-xs">Excel SO Bulanan</span>
                         </button>
 
                         {/* Add product locally */}
                         <button
                           id="open-add-product-modal"
                           onClick={() => setIsAddModalOpen(true)}
-                          className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 shadow-xs transition-colors cursor-pointer w-full sm:w-auto"
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 sm:px-4 shadow-xs transition-colors cursor-pointer sm:w-auto"
                         >
-                          <Plus className="h-4 w-4" />
-                          Tambah Produk Baru
+                          <Plus className="h-4 w-4 shrink-0" />
+                          <span className="truncate text-[10px] xs:text-xs">Tambah Baru</span>
                         </button>
 
                         {/* Re-sync CSV */}
@@ -705,7 +749,7 @@ export default function App() {
                           id="sync-csv-btn"
                           onClick={() => handleLoadProducts(true)}
                           disabled={isRefreshing}
-                          className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+                          className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
                           title="Sinkronkan Ulang dengan Google Sheets"
                         >
                           <RefreshCw className={`h-4 w-4 text-slate-600 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -738,19 +782,21 @@ export default function App() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-nowrap md:flex-wrap gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-1 scrollbar-none">
+                      <div className="flex flex-nowrap gap-2 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth snap-x scrollbar-thin scrollbar-thumb-slate-200">
                         {(['All', 'Power Bank', 'Kabel Data', 'Audio / Earphone', 'Charger', 'Aksesoris Lainnya'] as CategoryFilter[]).map((cat) => (
                           <button
                             key={cat}
                             id={`filter-btn-${cat.replace(/\s+/g, '-')}`}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`rounded-lg px-3 py-1.5 text-2xs font-bold tracking-wide transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                            className={`rounded-xl px-4 py-2 text-xs font-bold tracking-wide transition-all cursor-pointer shrink-0 whitespace-nowrap snap-align-start ${
                               selectedCategory === cat
-                                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                                ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold scale-[1.02]'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
                             }`}
                           >
-                            {cat === 'All' ? 'Semua Produk' : cat}
+                            <span>
+                              {cat === 'All' ? 'Semua Produk' : cat}
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -762,42 +808,42 @@ export default function App() {
                         <Grid className="h-3 w-3 text-amber-500" /> Tampilan Marketplace Pisen
                       </span>
                       
-                      <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg self-start sm:self-auto border border-slate-200">
+                      <div className="grid grid-cols-3 sm:flex sm:items-center gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto border border-slate-200">
                         <button
                           id="grid-mode-3x3"
                           onClick={() => setGridMode('3x3')}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 text-4xs font-black uppercase rounded-md transition-all cursor-pointer ${
+                          className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 text-[8px] xs:text-[9px] sm:text-xs font-black uppercase rounded-md transition-all cursor-pointer ${
                             gridMode === '3x3'
                               ? 'bg-white text-slate-950 shadow-xs border-b border-slate-200'
                               : 'text-slate-500 hover:text-slate-800'
                           }`}
                         >
-                          <Grid className="h-3 w-3 text-amber-500" />
-                          Grid 3x3
+                          <Grid className="h-3 w-3 text-amber-500 shrink-0" />
+                          <span className="truncate">Grid 3x3</span>
                         </button>
                         <button
                           id="grid-mode-4x4"
                           onClick={() => setGridMode('4x4')}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 text-4xs font-black uppercase rounded-md transition-all cursor-pointer ${
+                          className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 text-[8px] xs:text-[9px] sm:text-xs font-black uppercase rounded-md transition-all cursor-pointer ${
                             gridMode === '4x4'
                               ? 'bg-white text-slate-950 shadow-xs border-b border-slate-200'
                               : 'text-slate-500 hover:text-slate-800'
                           }`}
                         >
-                          <LayoutGrid className="h-3 w-3 text-amber-500" />
-                          Grid 4x4
+                          <LayoutGrid className="h-3 w-3 text-amber-500 shrink-0" />
+                          <span className="truncate">Grid 4x4</span>
                         </button>
                         <button
                           id="grid-mode-list"
                           onClick={() => setGridMode('list')}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 text-4xs font-black uppercase rounded-md transition-all cursor-pointer ${
+                          className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 text-[8px] xs:text-[9px] sm:text-xs font-black uppercase rounded-md transition-all cursor-pointer ${
                             gridMode === 'list'
                               ? 'bg-white text-slate-950 shadow-xs border-b border-slate-200'
                               : 'text-slate-500 hover:text-slate-800'
                           }`}
                         >
-                          <List className="h-3 w-3 text-amber-500" />
-                          List View
+                          <List className="h-3 w-3 text-amber-500 shrink-0" />
+                          <span className="truncate">List View</span>
                         </button>
                       </div>
                     </div>
@@ -823,7 +869,7 @@ export default function App() {
                   ) : (
                     <div className={
                       gridMode === '3x3'
-                        ? "grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
+                        ? "grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
                         : gridMode === '4x4'
                           ? "grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4"
                           : "grid gap-4 grid-cols-1"
@@ -847,80 +893,18 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Right Panel: Shopping Calculator & Wishlist Summary */}
-                <div id="cart-calculator-section" className="md:col-span-4 space-y-6">
-                  
-                  {/* Shopping Calculator */}
-                  <CartCalculator
-                    items={cartItems}
-                    onUpdateQuantity={handleUpdateQuantity}
-                    onRemoveItem={handleRemoveCartItem}
-                    onClearCart={() => setCartItems([])}
-                  />
+              </div>
+            )}
 
-                  {/* Favorites Sidebar List */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <Heart className="h-4 w-4 text-rose-500 fill-rose-500" />
-                      <h3 className="font-bold text-slate-900 text-sm">Daftar Keinginan ({favorites.length})</h3>
-                    </div>
-
-                    {favorites.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-slate-400">
-                        Belum ada produk favorit disimpan.
-                      </div>
-                    ) : (
-                      <div className="mt-3 space-y-2.5 max-h-[220px] overflow-y-auto">
-                        {products
-                          .filter((p) => favorites.includes(p.barcode))
-                          .map((fav) => (
-                            <div
-                              key={fav.barcode}
-                              onClick={() => setSelectedProduct(fav)}
-                              className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
-                            >
-                              <img
-                                src={fav.imageUrl}
-                                alt={fav.name}
-                                className="h-8 w-8 rounded-md object-contain border bg-white"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=60';
-                                }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <h4 className="truncate text-xs font-bold text-slate-700 leading-tight">
-                                  {fav.name}
-                                </h4>
-                                <span className="text-3xs font-mono text-slate-400 block">{fav.barcode}</span>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Database Information card */}
-                  <div className="rounded-2xl border border-slate-100 bg-slate-100/50 p-4">
-                    <div className="flex gap-2 text-slate-600">
-                      <Database className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <span className="text-2xs font-extrabold uppercase text-slate-500 tracking-wider">Sumber Informasi Data</span>
-                        <p className="text-4xs text-slate-500 leading-normal">
-                          Katalog disinkronkan langsung dari Google Spreadsheet publik Pisen: 
-                          <a 
-                            href={CSV_URL} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-amber-600 font-bold hover:underline ml-1 break-all"
-                          >
-                            Buka Excel Asli ↗
-                          </a>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
+            {/* If on RECONCILIATION TAB */}
+            {activeTab === 'reconciliation' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <CartCalculator
+                  items={cartItems}
+                  onUpdateQuantity={handleUpdateQuantity}
+                  onRemoveItem={handleRemoveCartItem}
+                  onClearCart={() => setCartItems([])}
+                />
               </div>
             )}
 
@@ -930,6 +914,7 @@ export default function App() {
                 <BarcodeFinder
                   products={products}
                   onScanSuccess={handleScanSuccess}
+                  onAddToCart={handleAddToCart}
                 />
               </div>
             )}
@@ -966,15 +951,26 @@ export default function App() {
         products={products}
       />
 
+      <SearchScannerModal
+        isOpen={isSearchScannerOpen}
+        onClose={() => setIsSearchScannerOpen(false)}
+        products={products}
+        onScan={(scannedBarcode) => {
+          setSearchQuery(scannedBarcode);
+          // Optional: If there is a perfect match, trigger haptic or show success feedback
+          const matched = products.find(p => p.barcode.toUpperCase() === scannedBarcode.toUpperCase());
+          if (matched) {
+            triggerHapticSuccess();
+          }
+        }}
+      />
+
       {/* Floating Cart Button for Mobile */}
       {cartItems.length > 0 && (
         <div className="fixed bottom-6 right-6 z-40 md:hidden">
           <button
             onClick={() => {
-              const element = document.getElementById('cart-calculator-section');
-              if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-              }
+              setActiveTab('reconciliation');
             }}
             className="flex h-12 items-center gap-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white px-4 shadow-lg shadow-slate-900/40 active:scale-95 border border-slate-700 transition-all cursor-pointer font-sans"
           >
@@ -991,6 +987,31 @@ export default function App() {
           </button>
         </div>
       )}
+
+      {/* Toast Notification for all screen sizes */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-4 rounded-xl bg-slate-900 border border-slate-800 text-white px-4 py-3 shadow-2xl text-xs max-w-sm w-[90%]"
+          >
+            <div className="flex-1 truncate">
+              {toastMessage}
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab('reconciliation');
+                setToastMessage(null);
+              }}
+              className="text-amber-400 font-extrabold hover:text-amber-300 transition-colors shrink-0 uppercase tracking-wider text-[10px] pl-2 border-l border-slate-800 cursor-pointer"
+            >
+              Buka
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 4. Global Footer */}
       <footer className="mt-auto border-t border-slate-200 bg-white py-6 text-center text-2xs text-slate-500 shrink-0">
