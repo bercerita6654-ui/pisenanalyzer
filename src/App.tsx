@@ -20,6 +20,7 @@ import { BarcodeFinder } from './components/BarcodeFinder';
 import { AddProductModal } from './components/AddProductModal';
 import { StockOpnameModal } from './components/StockOpnameModal';
 import { SearchScannerModal } from './components/SearchScannerModal';
+import { UpdateStockModal } from './components/UpdateStockModal';
 import { 
   Search, 
   Grid, 
@@ -28,6 +29,7 @@ import {
   RefreshCw, 
   Heart, 
   Scale, 
+  Boxes, 
   Layers, 
   TrendingDown, 
   Database,
@@ -103,6 +105,8 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isSOModalOpen, setIsSOModalOpen] = useState<boolean>(false);
   const [isSearchScannerOpen, setIsSearchScannerOpen] = useState<boolean>(false);
+  const [isUpdateStockModalOpen, setIsUpdateStockModalOpen] = useState<boolean>(false);
+  const [selectedUpdateBarcode, setSelectedUpdateBarcode] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'catalog' | 'reconciliation' | 'scanner'>('catalog');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -723,6 +727,20 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {/* Update Stock Button */}
+                        <button
+                          id="open-update-stock-modal"
+                          onClick={() => {
+                            setSelectedUpdateBarcode(null);
+                            setIsUpdateStockModalOpen(true);
+                          }}
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs py-2.5 sm:px-4 shadow-sm transition-all active:scale-98 cursor-pointer sm:w-auto"
+                          title="Buka Menu Update / Penyesuaian Stok Cabang"
+                        >
+                          <Boxes className="h-4 w-4 shrink-0" />
+                          <span className="truncate text-[10px] xs:text-xs">Update Stok</span>
+                        </button>
+
                         {/* Download Stock Opname (SO) Form */}
                         <button
                           id="open-so-modal"
@@ -731,7 +749,7 @@ export default function App() {
                           title="Unduh Formulir SO (Stock Opname) Bulanan dalam Format Excel"
                         >
                           <FileSpreadsheet className="h-4 w-4 text-emerald-600 shrink-0" />
-                          <span className="truncate text-[10px] xs:text-xs">Excel SO Bulanan</span>
+                          <span className="truncate text-[10px] xs:text-xs">Excel SO</span>
                         </button>
 
                         {/* Add product locally */}
@@ -962,6 +980,20 @@ export default function App() {
           if (matched) {
             triggerHapticSuccess();
           }
+        }}
+      />
+
+      <UpdateStockModal
+        isOpen={isUpdateStockModalOpen}
+        onClose={() => {
+          setIsUpdateStockModalOpen(false);
+          setSelectedUpdateBarcode(null);
+        }}
+        products={products}
+        initialProductBarcode={selectedUpdateBarcode}
+        onSaveStock={(barcode, pgPrice, cwPrice, stocks) => {
+          handleLocalUpdateProduct(barcode, pgPrice, cwPrice, stocks);
+          triggerHapticSuccess();
         }}
       />
 
